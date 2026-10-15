@@ -1,0 +1,49 @@
+name: Обновить расписание
+
+on:
+  schedule:
+    - cron: "17 */3 * * *"   # каждые 3 часа
+  workflow_dispatch:          # кнопка «Run workflow» для ручного запуска
+  push:
+    branches: [main]
+    paths:
+      - "config.json"
+      - "make_calendar.py"
+      - ".github/workflows/update.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-calendar
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Установить библиотеки
+        run: pip install -r requirements.txt
+
+      - name: Скачать расписание и собрать календарь
+        run: python make_calendar.py
+
+      - name: Сохранить календарь
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add schedule.ics
+          if ! git diff --cached --quiet; then
+            git commit -m "Расписание обновлено"
+            git push
+          elif [ $(( $(date +%s) - $(git log -1 --format=%ct) )) -gt 2592000 ]; then
+            # GitHub отключает автозапуск, если в хранилище 60 дней ничего не менялось
+            git commit --allow-empty -m "Поддержание автозапуска"
+            git push
+          fi
