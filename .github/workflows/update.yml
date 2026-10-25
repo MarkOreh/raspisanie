@@ -21,6 +21,7 @@ concurrency:
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
 
@@ -35,15 +36,17 @@ jobs:
         run: python make_calendar.py
 
       - name: Сохранить календарь
+        if: ${{ !cancelled() }}   # сохраняем то, что успели скачать, даже при ошибке
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add schedule.ics
-          if ! git diff --cached --quiet; then
-            git commit -m "Расписание обновлено"
-            git push
-          elif [ $(( $(date +%s) - $(git log -1 --format=%ct) )) -gt 2592000 ]; then
-            # GitHub отключает автозапуск, если в хранилище 60 дней ничего не менялось
-            git commit --allow-empty -m "Поддержание автозапуска"
+          git add schedule.ics status.json 2>/dev/null || git add schedule.ics
+          if git diff --cached --quiet; then
+            echo "Без изменений"
+          else
+            # status.json — отметка об удачной проверке (раз в 12 ч); заодно не даёт
+            # GitHub отключить автозапуск через 60 дней без изменений
+            if git diff --cached --quiet -- schedule.ics; then msg="Отметка: сайт доступен"; else msg="Расписание обновлено"; fi
+            git commit -m "$msg"
             git push
           fi

@@ -11,7 +11,7 @@ import json
 import re
 import sys
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from io import BytesIO
 from pathlib import Path
 
@@ -40,20 +40,38 @@ HEADERS = {
 
 # ---------- скачивание ----------
 
-def download_week(monday):
+class SiteUnavailable(Exception):
+    """Сайт СПбГУ не ответил или ответил ошибкой сервера — временный сбой."""
+
+
+def download_week(monday, pauses=(20, 60)):
     import requests
 
-    response = requests.get(
-        EXCEL_URL,
-        params={"studentGroupId": CONFIG["group_id"], "weekMonday": monday.isoformat()},
-        cookies={"_culture": "ru"},
-        headers={"User-Agent": "Mozilla/5.0 (spbu-timetable-to-calendar)"},
-        timeout=60,
-    )
-    response.raise_for_status()
-    if not response.content.startswith(b"PK"):  # xlsx — это zip-архив
-        raise RuntimeError(f"Сайт вернул не Excel за неделю {monday}")
-    return response.content
+    last_error = None
+    for attempt in range(len(pauses) + 1):
+        if attempt:
+            print(f"  повтор через {pauses[attempt - 1]} с ({last_error})")
+            time.sleep(pauses[attempt - 1])
+        try:
+            response = requests.get(
+                EXCEL_URL,
+                params={"studentGroupId": CONFIG["group_id"], "weekMonday": monday.isoformat()},
+                cookies={"_culture": "ru"},
+                headers={"User-Agent": "Mozilla/5.0 (spbu-timetable-to-calendar)"},
+                timeout=(15, 90),  # 15 с на подключение, 90 с на ответ
+            )
+        except (requests.Timeout, requests.ConnectionError) as error:
+            last_error = type(error).__name__
+            continue
+        if response.status_code >= 500 or response.status_code == 429:
+            last_error = f"HTTP {response.status_code}"
+            continue
+        response.raise_for_status()  # прочие ошибки (403, 404) — не временные
+        if not response.content.startswith(b"PK"):  # xlsx — это zip-архив
+            last_error = "сайт вернул не Excel"
+            continue
+        return response.content
+    raise SiteUnavailable(f"неделя с {monday:%d.%m.%Y}: {last_error}")
 
 
 # ---------- разбор Excel ----------
@@ -151,7 +169,8 @@ def utc(d, hm):
     return (datetime(d.year, d.month, d.day, h, m) - MSK).strftime("%Y%m%dT%H%M%SZ")
 
 
-def build_ics(rows):
+def build_events(rows):
+    """Строки из Excel → список событий: (начало в UTC, [строки VEVENT])."""
     # параллельные подгруппы (один предмет в одно время) — одним событием
     events = {}
     for row in rows:
@@ -160,14 +179,8 @@ def build_ics(rows):
         if row not in variants:
             variants.append(row)
 
-    lines = [
-        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//spbu-timetable//RU",
-        "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
-        f"X-WR-CALNAME:{esc(CONFIG.get('calendar_name', 'Учёба'))}",
-        "X-WR-TIMEZONE:Europe/Moscow",
-        "REFRESH-INTERVAL;VALUE=DURATION:PT3H", "X-PUBLISHED-TTL:PT3H",
-    ]
-    for (d, t1, t2, name), v in sorted(events.items(), key=lambda kv: (kv[0][0], kv[0][1])):
+    blocks = []
+    for (d, t1, t2, name), v in events.items():
         subj, sep, kind = name.rpartition(", ")
         title = f"{subj} ({kind})" if sep else name
         if len(v) == 1:
@@ -183,37 +196,121 @@ def build_ics(rows):
                 "\n".join(f"• {x['teacher']} — {fmt_place(x['place'])}" for x in v)
         uid = hashlib.md5(f"{d}|{t1}|{name}".encode()).hexdigest() + "@spbu-timetable"
         start = utc(d, t1)
-        lines += ["BEGIN:VEVENT", f"UID:{uid}", f"DTSTAMP:{start}",
-                  f"DTSTART:{start}", f"DTEND:{utc(d, t2)}",
-                  f"SUMMARY:{esc(title)}"]
+        lines = ["BEGIN:VEVENT", f"UID:{uid}", f"DTSTAMP:{start}",
+                 f"DTSTART:{start}", f"DTEND:{utc(d, t2)}",
+                 f"SUMMARY:{esc(title)}"]
         if loc:
             lines.append(f"LOCATION:{esc(loc)}")
         if desc:
             lines.append(f"DESCRIPTION:{esc(desc)}")
         lines.append("END:VEVENT")
+        blocks.append((start, lines))
+    return blocks
+
+
+def old_blocks():
+    """События из прежнего schedule.ics — чтобы не терять недели, которые не скачались."""
+    if not OUT.exists():
+        return []
+    text = OUT.read_bytes().decode("utf-8").replace("\r\n", "\n")
+    text = text.replace("\n ", "")  # склеиваем перенесённые длинные строки
+    blocks, cur = [], None
+    for line in text.split("\n"):
+        if line == "BEGIN:VEVENT":
+            cur = [line]
+        elif cur is not None:
+            cur.append(line)
+            if line == "END:VEVENT":
+                start = next(x[8:] for x in cur if x.startswith("DTSTART:"))
+                blocks.append((start, cur))
+                cur = None
+    return blocks
+
+
+def week_of(start):
+    local = datetime.strptime(start, "%Y%m%dT%H%M%SZ") + MSK
+    return local.date() - timedelta(days=local.weekday())
+
+
+def assemble(blocks):
+    lines = [
+        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//spbu-timetable//RU",
+        "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+        f"X-WR-CALNAME:{esc(CONFIG.get('calendar_name', 'Учёба'))}",
+        "X-WR-TIMEZONE:Europe/Moscow",
+        "REFRESH-INTERVAL;VALUE=DURATION:PT3H", "X-PUBLISHED-TTL:PT3H",
+    ]
+    for _, block in sorted(blocks, key=lambda b: (b[0], b[1])):
+        lines += block
     lines.append("END:VCALENDAR")
-    return "\r\n".join(fold(x) for x in lines) + "\r\n", len(events)
+    return "\r\n".join(fold(x) for x in lines) + "\r\n"
+
+
+# ---------- отметка об успешных проверках ----------
+
+STATUS = ROOT / "status.json"
+ALERT_AFTER = timedelta(hours=24)  # молчим о сбоях сайта, если они короче суток
+
+
+def read_last_ok():
+    try:
+        return datetime.fromisoformat(json.loads(STATUS.read_text())["last_ok"])
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def mark_ok(now):
+    last_ok = read_last_ok()
+    if last_ok is None or now - last_ok > timedelta(hours=12):  # не чаще двух раз в сутки
+        STATUS.write_text(json.dumps({"last_ok": now.isoformat(timespec="minutes")}) + "\n")
 
 
 def main():
-    rows = []
     if "--file" in sys.argv:  # проверка на уже скачанном файле
         path = Path(sys.argv[sys.argv.index("--file") + 1])
-        rows = parse_sheet(path.read_bytes(), date(2026, 10, 12))
-    else:
-        today = date.today()
-        this_monday = today - timedelta(days=today.weekday())
-        weeks = range(-CONFIG.get("weeks_back", 4), CONFIG.get("weeks_ahead", 10) + 1)
-        for i in weeks:
-            monday = this_monday + timedelta(weeks=i)
-            week_rows = parse_sheet(download_week(monday), monday)
-            print(f"Неделя с {monday:%d.%m.%Y}: занятий {len(week_rows)}")
-            rows += week_rows
-            time.sleep(1)  # не нагружаем сайт СПбГУ
+        blocks = build_events(parse_sheet(path.read_bytes(), date(2026, 10, 12)))
+        OUT.write_text(assemble(blocks), encoding="utf-8", newline="")
+        print(f"Готово: {len(blocks)} событий → {OUT.name}")
+        return
 
-    text, count = build_ics(rows)
-    OUT.write_text(text, encoding="utf-8", newline="")
-    print(f"Готово: {count} событий → {OUT.name}")
+    now = datetime.now(timezone.utc)
+    today = (now + MSK).date()
+    this_monday = today - timedelta(days=today.weekday())
+    weeks = range(-CONFIG.get("weeks_back", 4), CONFIG.get("weeks_ahead", 10) + 1)
+
+    rows, failed, in_a_row = [], set(), 0
+    for i in weeks:
+        monday = this_monday + timedelta(weeks=i)
+        if in_a_row >= 2:  # сайт лежит — не мучаем его остальными неделями
+            failed.add(monday)
+            continue
+        try:
+            data = download_week(monday)
+        except SiteUnavailable as error:
+            print(f"::warning::Сайт СПбГУ не ответил: {error}. Оставляю прежние данные за эту неделю.")
+            failed.add(monday)
+            in_a_row += 1
+            continue
+        in_a_row = 0
+        week_rows = parse_sheet(data, monday)
+        print(f"Неделя с {monday:%d.%m.%Y}: занятий {len(week_rows)}")
+        rows += week_rows
+        time.sleep(1)  # не нагружаем сайт СПбГУ
+
+    blocks = build_events(rows)
+    kept = [b for b in old_blocks() if week_of(b[0]) in failed]
+    OUT.write_text(assemble(blocks + kept), encoding="utf-8", newline="")
+    print(f"Готово: {len(blocks)} новых событий, {len(kept)} оставлено из прежней версии")
+
+    if not failed:
+        mark_ok(now)
+        return
+    last_ok = read_last_ok()
+    if last_ok and now - last_ok > ALERT_AFTER:
+        print(f"::error::Расписание не удаётся скачать полностью с {last_ok:%d.%m %H:%M} UTC — "
+              "больше суток. Календарь показывает последнюю удачную версию.")
+        sys.exit(1)
+    print(f"Сбой временный: не скачалось недель — {len(failed)}. Попробую при следующем запуске.")
 
 
 if __name__ == "__main__":
