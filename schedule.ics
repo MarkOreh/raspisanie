@@ -2420,18 +2420,6 @@ DESCRIPTION:Коллоквиум\nПреподаватель: Поляко
   лит. А\, ауд. 504
 END:VEVENT
 BEGIN:VEVENT
-UID:e5f2b8c6ddb40489bbe5c104f196bcd3@spbu-timetable
-DTSTAMP:20261203T133000Z
-DTSTART:20261203T133000Z
-DTEND:20261203T150000Z
-SUMMARY:Основы менеджмента (зачёт)
-LOCATION:переулок Декабристов\, д. 16\, лит. А\, а
- уд. 504
-DESCRIPTION:Зачёт\nПреподаватель: Поляков Н. А.\
- nМесто: переулок Декабристов\, д. 16\, лит. А
- \, ауд. 504
-END:VEVENT
-BEGIN:VEVENT
 UID:08abcc82985396e89cb2f6dbb60c340d@spbu-timetable
 DTSTAMP:20261204T060000Z
 DTSTART:20261204T060000Z
