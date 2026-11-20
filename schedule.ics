@@ -1949,6 +1949,16 @@ DESCRIPTION:Сам. работа в присутствии преподав
  . 504
 END:VEVENT
 BEGIN:VEVENT
+UID:b12918bba94d4908224da1efb261aa62@spbu-timetable
+DTSTAMP:20261209T060000Z
+DTSTART:20261209T060000Z
+DTEND:20261209T073000Z
+SUMMARY:Философия (онлайн-курс) (зачёт)
+LOCATION:Онлайн
+DESCRIPTION:Зачёт\nПреподаватель: Паткуль А. Б.\
+ nМесто: Онлайн
+END:VEVENT
+BEGIN:VEVENT
 UID:44c0f50ae7fdb373bf8f37576b0b66c4@spbu-timetable
 DTSTAMP:20261209T100000Z
 DTSTART:20261209T100000Z
@@ -2019,6 +2029,19 @@ DESCRIPTION:Сам. работа в присутствии преподав
  . 218
 END:VEVENT
 BEGIN:VEVENT
+UID:43aee5146b476f0ad27bc8eb53df1643@spbu-timetable
+DTSTAMP:20261210T093000Z
+DTSTART:20261210T093000Z
+DTEND:20261210T110000Z
+SUMMARY:Петрофизические исследования керна 
+ (зачёт)
+LOCATION:переулок Декабристов\, д. 16\, лит. А\, а
+ уд. 218
+DESCRIPTION:Зачёт\nПреподаватель: Тимашева А. Е
+ .\nМесто: переулок Декабристов\, д. 16\, лит. 
+ А\, ауд. 218
+END:VEVENT
+BEGIN:VEVENT
 UID:cba31fe5995ef4c7e4d3896871153979@spbu-timetable
 DTSTAMP:20261211T060000Z
 DTSTART:20261211T060000Z
@@ -2085,6 +2108,20 @@ LOCATION:переулок Декабристов\, д. 16\, лит. А\, а
 DESCRIPTION:Семинар\nПреподаватель: Сакулина Т
  . С.\nМесто: переулок Декабристов\, д. 16\, ли
  т. А\, ауд. 502
+END:VEVENT
+BEGIN:VEVENT
+UID:bcc5fcbb995bc631fcd02f8e619bb446@spbu-timetable
+DTSTAMP:20261212T060000Z
+DTSTART:20261212T060000Z
+DTEND:20261212T073000Z
+SUMMARY:Геологическая интерпретация геофиз
+ ических данных при поисках и разведке уг
+ леводородов (зачёт)
+LOCATION:переулок Декабристов\, д. 16\, лит. А\, а
+ уд. 511
+DESCRIPTION:Зачёт\nПреподаватель: Шиманский С. 
+ В.\nМесто: переулок Декабристов\, д. 16\, лит
+ . А\, ауд. 511
 END:VEVENT
 BEGIN:VEVENT
 UID:b261b9473c960cd381b526560e541483@spbu-timetable
@@ -2190,6 +2227,19 @@ LOCATION:переулок Декабристов\, д. 16\, лит. А\, а
 DESCRIPTION:Практическое занятие\nПреподавате
  ль: Резник А. Я.\nМесто: переулок Декабрис
  тов\, д. 16\, лит. А\, ауд. 511
+END:VEVENT
+BEGIN:VEVENT
+UID:e7ecfeeec41df7b922f3b19b3a0268f4@spbu-timetable
+DTSTAMP:20261216T163000Z
+DTSTART:20261216T163000Z
+DTEND:20261216T180000Z
+SUMMARY:Электив. Математические методы и мод
+ елирование в нефтяной геологии (зачёт)
+LOCATION:переулок Декабристов\, д. 16\, лит. А\, а
+ уд. 511
+DESCRIPTION:Зачёт\nПреподаватель: Котова И. К.\; 
+ Резник А. Я.\nМесто: переулок Декабристов\
+ , д. 16\, лит. А\, ауд. 511
 END:VEVENT
 BEGIN:VEVENT
 UID:20dea8e708422e52f2b07b1cbf84a5ad@spbu-timetable
@@ -2332,6 +2382,19 @@ DESCRIPTION:Сам. работа в присутствии преподав
  . 003
 END:VEVENT
 BEGIN:VEVENT
+UID:99849086145ad3048990d20da9bf7789@spbu-timetable
+DTSTAMP:20261223T133000Z
+DTSTART:20261223T133000Z
+DTEND:20261223T150000Z
+SUMMARY:Электив. Инструментальные методы ан
+ ализа (зачёт)
+LOCATION:переулок Декабристов\, д. 16\, лит. А\, а
+ уд. 216
+DESCRIPTION:Зачёт\nПреподаватель: Васильева К. 
+ Ю.\nМесто: переулок Декабристов\, д. 16\, лит
+ . А\, ауд. 216
+END:VEVENT
+BEGIN:VEVENT
 UID:6d0bcc6fe7a2fdbbfbb79e7894fcd839@spbu-timetable
 DTSTAMP:20261225T060000Z
 DTSTART:20261225T060000Z
@@ -2345,5 +2408,31 @@ DESCRIPTION:Сам. работа в присутствии преподав
  ателя\nПреподаватель: Лушпеев В. А.\nМесто
  : переулок Декабристов\, д. 16\, лит. А\, ауд. 
  506
+END:VEVENT
+BEGIN:VEVENT
+UID:01f9041c6e9f5ed22ca9e54aa141d0ce@spbu-timetable
+DTSTAMP:20261225T074500Z
+DTSTART:20261225T074500Z
+DTEND:20261225T091500Z
+SUMMARY:Оценка ресурсов и подсчет запасов не
+ фти и газа (зачёт)
+LOCATION:переулок Декабристов\, д. 16\, лит. А\, а
+ уд. 506
+DESCRIPTION:Зачёт\nПреподаватель: Лушпеев В. А.\
+ nМесто: переулок Декабристов\, д. 16\, лит. А
+ \, ауд. 506
+END:VEVENT
+BEGIN:VEVENT
+UID:da380aacf5545d93a2372d380b1d24cd@spbu-timetable
+DTSTAMP:20261226T070000Z
+DTSTART:20261226T070000Z
+DTEND:20261226T083000Z
+SUMMARY:Электив. Обработка и интерпретация с
+ ейсмических данных (зачёт)
+LOCATION:переулок Декабристов\, д. 16\, лит. А\, а
+ уд. 508
+DESCRIPTION:Зачёт\nПреподаватель: Сакулина Т. С
+ .\nМесто: переулок Декабристов\, д. 16\, лит. 
+ А\, ауд. 508
 END:VEVENT
 END:VCALENDAR
